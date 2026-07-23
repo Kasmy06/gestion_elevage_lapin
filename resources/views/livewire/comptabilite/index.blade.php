@@ -75,6 +75,7 @@
                     <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-farm-text-light">Date</th>
                     <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-farm-text-light">Libellé</th>
                     <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-farm-text-light">Catégorie</th>
+                    <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-farm-text-light">Notes</th>
                     <th class="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-farm-text-light">Montant</th>
                     <th class="px-4 py-2.5"></th>
                 </tr>
@@ -85,6 +86,7 @@
                         <td class="whitespace-nowrap px-4 py-3 text-sm text-farm-text-light">{{ $depense->date->format('d/m/Y') }}</td>
                         <td class="px-4 py-3 text-sm text-farm-text">{{ $depense->libelle }}</td>
                         <td class="whitespace-nowrap px-4 py-3 text-sm text-farm-text-light">{{ \App\Models\Depense::CATEGORIES[$depense->categorie] }}</td>
+                        <td class="px-4 py-3 text-sm text-farm-text-light">{{ $depense->notes ?? '—' }}</td>
                         <td class="whitespace-nowrap px-4 py-3 text-right text-sm font-medium text-farm-red">-{{ number_format($depense->montant, 0, ',', ' ') }}</td>
                         <td class="whitespace-nowrap px-4 py-3 text-right text-sm">
                             @if (auth()->user()->isAdmin())
@@ -100,7 +102,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" class="px-4 py-8 text-center text-sm text-farm-text-light">Aucune dépense pour cette période.</td>
+                        <td colspan="6" class="px-4 py-8 text-center text-sm text-farm-text-light">Aucune dépense pour cette période.</td>
                     </tr>
                 @endforelse
             </tbody>

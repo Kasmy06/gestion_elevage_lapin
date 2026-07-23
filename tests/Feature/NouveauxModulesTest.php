@@ -104,6 +104,10 @@ class NouveauxModulesTest extends TestCase
         $component->assertSee('Dépense du mois')
             ->assertDontSee('Dépense hors période');
 
+        Depense::factory()->create(['date' => Carbon::today(), 'libelle' => 'Avec note', 'notes' => 'Payé par mobile money']);
+
+        Livewire::test(ComptabiliteIndex::class)->assertSee('Payé par mobile money');
+
         $this->assertSame(20, $component->viewData('depensesPeriode')->total());
     }
 
