@@ -20,7 +20,9 @@ use App\Models\Parametre;
 use App\Models\User;
 use App\Models\Vente;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -134,6 +136,41 @@ class NouveauxModulesTest extends TestCase
 
         Livewire::test(ParametresIndex::class)
             ->assertStatus(403);
+    }
+
+    public function test_un_administrateur_peut_changer_le_logo_de_la_ferme(): void
+    {
+        Storage::fake('public');
+        $this->actingAs(User::factory()->create(['role' => 'admin']));
+
+        Livewire::test(ParametresIndex::class)
+            ->set('logo', UploadedFile::fake()->image('logo.png'))
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $logoPath = Parametre::current()->logo_path;
+
+        $this->assertNotNull($logoPath);
+        Storage::disk('public')->assertExists($logoPath);
+    }
+
+    public function test_remplacer_le_logo_supprime_lancien_fichier(): void
+    {
+        Storage::fake('public');
+        $this->actingAs(User::factory()->create(['role' => 'admin']));
+
+        Livewire::test(ParametresIndex::class)
+            ->set('logo', UploadedFile::fake()->image('ancien.png'))
+            ->call('save');
+
+        $ancienLogoPath = Parametre::current()->logo_path;
+
+        Livewire::test(ParametresIndex::class)
+            ->set('logo', UploadedFile::fake()->image('nouveau.png'))
+            ->call('save');
+
+        Storage::disk('public')->assertMissing($ancienLogoPath);
+        Storage::disk('public')->assertExists(Parametre::current()->logo_path);
     }
 
     public function test_le_dernier_administrateur_ne_peut_pas_etre_rétrogradé(): void

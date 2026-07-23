@@ -20,7 +20,7 @@
         <div class="flex min-h-screen items-center justify-center bg-gradient-to-br from-farm-green-dark via-farm-green to-green-600 px-4 py-10">
             <div class="w-full max-w-md rounded-2xl bg-white p-8 shadow-[0_20px_60px_rgba(0,0,0,.3)]">
                 <a href="/" wire:navigate class="mb-8 flex items-center gap-3">
-                    <img src="{{ asset('images/logo.jpg') }}" alt="{{ config('app.name') }}" class="h-12 w-12 shrink-0 rounded-full object-cover">
+                    <img src="{{ \App\Models\Parametre::current()->logoUrl() }}" alt="{{ config('app.name') }}" class="h-12 w-12 shrink-0 rounded-full object-cover">
                     <div>
                         <h1 class="text-lg font-bold leading-tight text-farm-text">{{ config('app.name') }}</h1>
                         <span class="text-xs text-farm-text-light">Gestion d'élevage cunicole</span>

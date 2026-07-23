@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Concerns\LogsActivity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 
 class Parametre extends Model
 {
@@ -14,6 +15,7 @@ class Parametre extends Model
     protected $fillable = [
         'nom_ferme',
         'devise',
+        'logo_path',
     ];
 
     /**
@@ -31,5 +33,12 @@ class Parametre extends Model
     public function activityLogLabel(): string
     {
         return $this->nom_ferme;
+    }
+
+    public function logoUrl(): string
+    {
+        return $this->logo_path
+            ? Storage::url($this->logo_path)
+            : asset('images/logo.jpg');
     }
 }

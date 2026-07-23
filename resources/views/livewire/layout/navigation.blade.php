@@ -10,7 +10,7 @@
         class="fixed inset-y-0 left-0 z-40 flex w-64 -translate-x-full transform flex-col overflow-y-auto bg-farm-green text-white transition-transform duration-200 ease-in-out lg:static lg:z-auto lg:translate-x-0"
     >
         <div class="flex items-center gap-3 border-b border-white/15 px-4 py-5">
-            <img src="{{ asset('images/logo.jpg') }}" alt="{{ config('app.name') }}" class="h-9 w-9 shrink-0 rounded-full object-cover">
+            <img src="{{ \App\Models\Parametre::current()->logoUrl() }}" alt="{{ config('app.name') }}" class="h-9 w-9 shrink-0 rounded-full object-cover">
             <div class="min-w-0">
                 <h1 class="truncate text-[15px] font-semibold leading-tight">{{ config('app.name') }}</h1>
                 <span class="text-[11px] font-light text-white/70">Gestion d'élevage cunicole</span>

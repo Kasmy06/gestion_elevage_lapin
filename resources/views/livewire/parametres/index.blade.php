@@ -32,6 +32,16 @@
                     <x-input-error :messages="$errors->get('devise')" class="mt-2" />
                 </div>
                 <div class="sm:col-span-2">
+                    <x-input-label for="logo" value="Logo de la ferme" />
+                    <input wire:model="logo" id="logo" type="file" accept="image/*" class="mt-1 block w-full text-sm text-farm-text-light file:me-4 file:rounded-md file:border-0 file:bg-farm-green-pale file:px-3 file:py-2 file:text-sm file:font-medium file:text-farm-green hover:file:bg-green-100" />
+                    <x-input-error :messages="$errors->get('logo')" class="mt-2" />
+                    @if ($logo)
+                        <img src="{{ $logo->temporaryUrl() }}" class="mt-2 h-16 w-16 rounded-full object-cover" alt="Aperçu du logo">
+                    @else
+                        <img src="{{ $parametre->logoUrl() }}" class="mt-2 h-16 w-16 rounded-full object-cover" alt="Logo actuel">
+                    @endif
+                </div>
+                <div class="sm:col-span-2">
                     <x-primary-button>Enregistrer</x-primary-button>
                 </div>
             </form>
