@@ -92,6 +92,21 @@ class NouveauxModulesTest extends TestCase
             ->assertViewHas('profit', 6000.0);
     }
 
+    public function test_la_liste_des_depenses_du_mois_saffiche_et_se_pagine(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        Depense::factory()->count(20)->create(['date' => Carbon::today(), 'libelle' => 'Dépense du mois']);
+        Depense::factory()->create(['date' => Carbon::today()->subMonth(), 'libelle' => 'Dépense hors période']);
+
+        $component = Livewire::test(ComptabiliteIndex::class);
+
+        $component->assertSee('Dépense du mois')
+            ->assertDontSee('Dépense hors période');
+
+        $this->assertSame(20, $component->viewData('depensesPeriode')->total());
+    }
+
     public function test_une_depense_peut_etre_ajoutee_depuis_la_comptabilite(): void
     {
         $this->actingAs(User::factory()->create());

@@ -49,42 +49,63 @@
         </div>
     </div>
 
-    <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div class="rounded-xl border border-farm-border bg-white p-5 shadow-sm">
-            <h3 class="mb-3 text-sm font-semibold text-farm-text">Dernières ventes du mois</h3>
-            @forelse ($dernieresVentes as $vente)
-                <div class="flex items-center justify-between border-b border-farm-bg py-2 text-sm last:border-0">
-                    <span class="text-farm-text">{{ $vente->description }} @if($vente->client) <span class="text-farm-text-light">— {{ $vente->client->nom }}</span> @endif</span>
-                    <span class="font-medium text-farm-green">+{{ number_format($vente->montant_total, 0, ',', ' ') }}</span>
-                </div>
-            @empty
-                <p class="text-sm text-farm-text-light">Aucune vente ce mois-ci.</p>
-            @endforelse
-            <a href="{{ route('ventes.index') }}" wire:navigate class="mt-3 inline-block text-sm text-farm-green hover:underline">Voir toutes les ventes →</a>
-        </div>
+    <div class="mb-6 rounded-xl border border-farm-border bg-white p-5 shadow-sm">
+        <h3 class="mb-3 text-sm font-semibold text-farm-text">Dernières ventes du mois</h3>
+        @forelse ($dernieresVentes as $vente)
+            <div class="flex items-center justify-between border-b border-farm-bg py-2 text-sm last:border-0">
+                <span class="text-farm-text">{{ $vente->description }} @if($vente->client) <span class="text-farm-text-light">— {{ $vente->client->nom }}</span> @endif</span>
+                <span class="font-medium text-farm-green">+{{ number_format($vente->montant_total, 0, ',', ' ') }}</span>
+            </div>
+        @empty
+            <p class="text-sm text-farm-text-light">Aucune vente ce mois-ci.</p>
+        @endforelse
+        <a href="{{ route('ventes.index') }}" wire:navigate class="mt-3 inline-block text-sm text-farm-green hover:underline">Voir toutes les ventes →</a>
+    </div>
 
-        <div class="rounded-xl border border-farm-border bg-white p-5 shadow-sm">
-            <h3 class="mb-3 text-sm font-semibold text-farm-text">Dernières dépenses du mois</h3>
-            @forelse ($dernieresDepenses as $depense)
-                <div class="flex items-center justify-between border-b border-farm-bg py-2 text-sm last:border-0">
-                    <span class="text-farm-text">{{ $depense->libelle }} <span class="text-farm-text-light">— {{ \App\Models\Depense::CATEGORIES[$depense->categorie] }}</span></span>
-                    <span class="flex items-center gap-3">
-                        <span class="font-medium text-farm-red">-{{ number_format($depense->montant, 0, ',', ' ') }}</span>
-                        @if (auth()->user()->isAdmin())
-                            <button
-                                type="button"
-                                wire:click="supprimerDepense({{ $depense->id }})"
-                                wire:confirm="Supprimer la dépense « {{ $depense->libelle }} » ?"
-                                class="material-icons text-base text-farm-text-light hover:text-farm-red"
-                                title="Supprimer"
-                            >delete</button>
-                        @endif
-                    </span>
-                </div>
-            @empty
-                <p class="text-sm text-farm-text-light">Aucune dépense ce mois-ci.</p>
-            @endforelse
+    <x-table-card>
+        <div class="flex items-center justify-between border-b border-farm-border px-4 py-3">
+            <h3 class="text-sm font-semibold text-farm-text">Dépenses du mois</h3>
         </div>
+        <table class="min-w-full divide-y divide-farm-border">
+            <thead class="bg-farm-bg">
+                <tr>
+                    <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-farm-text-light">Date</th>
+                    <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-farm-text-light">Libellé</th>
+                    <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-farm-text-light">Catégorie</th>
+                    <th class="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-farm-text-light">Montant</th>
+                    <th class="px-4 py-2.5"></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-farm-border">
+                @forelse ($depensesPeriode as $depense)
+                    <tr wire:key="depense-{{ $depense->id }}" class="hover:bg-gray-50">
+                        <td class="whitespace-nowrap px-4 py-3 text-sm text-farm-text-light">{{ $depense->date->format('d/m/Y') }}</td>
+                        <td class="px-4 py-3 text-sm text-farm-text">{{ $depense->libelle }}</td>
+                        <td class="whitespace-nowrap px-4 py-3 text-sm text-farm-text-light">{{ \App\Models\Depense::CATEGORIES[$depense->categorie] }}</td>
+                        <td class="whitespace-nowrap px-4 py-3 text-right text-sm font-medium text-farm-red">-{{ number_format($depense->montant, 0, ',', ' ') }}</td>
+                        <td class="whitespace-nowrap px-4 py-3 text-right text-sm">
+                            @if (auth()->user()->isAdmin())
+                                <button
+                                    type="button"
+                                    wire:click="supprimerDepense({{ $depense->id }})"
+                                    wire:confirm="Supprimer la dépense « {{ $depense->libelle }} » ?"
+                                    class="material-icons text-base text-farm-text-light hover:text-farm-red"
+                                    title="Supprimer"
+                                >delete</button>
+                            @endif
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="5" class="px-4 py-8 text-center text-sm text-farm-text-light">Aucune dépense pour cette période.</td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </x-table-card>
+
+    <div class="mt-4">
+        {{ $depensesPeriode->links() }}
     </div>
 
     <x-crud-modal :show="$showModal" title="Nouvelle dépense">

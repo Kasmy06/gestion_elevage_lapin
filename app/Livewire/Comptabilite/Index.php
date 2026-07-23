@@ -10,11 +10,12 @@ use App\Models\Vente;
 use Illuminate\Support\Carbon;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
+use Livewire\WithPagination;
 
 #[Layout('layouts.app')]
 class Index extends Component
 {
-    use HasFlashMessage;
+    use HasFlashMessage, WithPagination;
 
     public int $mois;
 
@@ -36,6 +37,13 @@ class Index extends Component
     {
         $this->mois = (int) now()->month;
         $this->annee = (int) now()->year;
+    }
+
+    public function updating($property): void
+    {
+        if (in_array($property, ['mois', 'annee'], true)) {
+            $this->resetPage();
+        }
     }
 
     public function ouvrirDepense(): void
@@ -112,7 +120,7 @@ class Index extends Component
             'depenses' => $depenses,
             'profit' => $recettes - $depenses,
             'dernieresVentes' => Vente::whereBetween('date', [$debutPeriode->toDateString(), $finPeriode->toDateString()])->with('client')->orderByDesc('date')->limit(5)->get(),
-            'dernieresDepenses' => Depense::whereBetween('date', [$debutPeriode->toDateString(), $finPeriode->toDateString()])->orderByDesc('date')->limit(5)->get(),
+            'depensesPeriode' => Depense::whereBetween('date', [$debutPeriode->toDateString(), $finPeriode->toDateString()])->orderByDesc('date')->orderByDesc('id')->paginate(15),
             'chartLabels' => $moisChart->map(fn (Carbon $m) => ucfirst($m->translatedFormat('M Y')))->all(),
             'chartRecettes' => $moisChart->map(fn (Carbon $m) => $this->recettes($m->copy()->startOfMonth(), $m->copy()->endOfMonth()))->all(),
             'chartDepenses' => $moisChart->map(fn (Carbon $m) => $this->depenses($m->copy()->startOfMonth(), $m->copy()->endOfMonth()))->all(),
