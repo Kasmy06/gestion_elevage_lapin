@@ -107,6 +107,18 @@ class NouveauxModulesTest extends TestCase
         $this->assertSame(20, $component->viewData('depensesPeriode')->total());
     }
 
+    public function test_les_depenses_du_mois_sont_exportables_en_csv(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        Depense::factory()->create(['date' => Carbon::today(), 'libelle' => 'Vaccin VHD', 'montant' => 1500]);
+        Depense::factory()->create(['date' => Carbon::today()->subMonth(), 'libelle' => 'Hors période']);
+
+        Livewire::test(ComptabiliteIndex::class)
+            ->call('exporterDepenses')
+            ->assertFileDownloaded('depenses-'.Carbon::today()->format('Y-m').'.csv');
+    }
+
     public function test_une_depense_peut_etre_ajoutee_depuis_la_comptabilite(): void
     {
         $this->actingAs(User::factory()->create());

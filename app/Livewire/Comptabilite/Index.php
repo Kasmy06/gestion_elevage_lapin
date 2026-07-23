@@ -11,6 +11,7 @@ use Illuminate\Support\Carbon;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 #[Layout('layouts.app')]
 class Index extends Component
@@ -91,6 +92,39 @@ class Index extends Component
         $this->flash('Dépense supprimée.');
     }
 
+    private function periodeSelectionnee(): array
+    {
+        $debut = Carbon::create($this->annee, $this->mois, 1)->startOfMonth();
+
+        return [$debut, $debut->copy()->endOfMonth()];
+    }
+
+    public function exporterDepenses(): StreamedResponse
+    {
+        [$debutPeriode, $finPeriode] = $this->periodeSelectionnee();
+
+        $depenses = Depense::whereBetween('date', [$debutPeriode->toDateString(), $finPeriode->toDateString()])
+            ->orderByDesc('date')
+            ->get();
+
+        return response()->streamDownload(function () use ($depenses) {
+            $sortie = fopen('php://output', 'w');
+            fputcsv($sortie, ['Date', 'Libellé', 'Catégorie', 'Montant', 'Notes']);
+
+            foreach ($depenses as $depense) {
+                fputcsv($sortie, [
+                    $depense->date->format('d/m/Y'),
+                    $depense->libelle,
+                    Depense::CATEGORIES[$depense->categorie],
+                    $depense->montant,
+                    $depense->notes,
+                ]);
+            }
+
+            fclose($sortie);
+        }, 'depenses-'.$debutPeriode->format('Y-m').'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
     private function recettes(Carbon $debut, Carbon $fin): float
     {
         return (float) Vente::whereBetween('date', [$debut->toDateString(), $fin->toDateString()])->sum('montant_total');
@@ -107,8 +141,7 @@ class Index extends Component
 
     public function render()
     {
-        $debutPeriode = Carbon::create($this->annee, $this->mois, 1)->startOfMonth();
-        $finPeriode = $debutPeriode->copy()->endOfMonth();
+        [$debutPeriode, $finPeriode] = $this->periodeSelectionnee();
 
         $recettes = $this->recettes($debutPeriode, $finPeriode);
         $depenses = $this->depenses($debutPeriode, $finPeriode);

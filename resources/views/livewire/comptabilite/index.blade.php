@@ -65,6 +65,9 @@
     <x-table-card>
         <div class="flex items-center justify-between border-b border-farm-border px-4 py-3">
             <h3 class="text-sm font-semibold text-farm-text">Dépenses du mois</h3>
+            <button wire:click="exporterDepenses" class="inline-flex items-center gap-1.5 text-sm font-medium text-farm-green hover:underline">
+                <span class="material-icons text-base">download</span> Export CSV
+            </button>
         </div>
         <table class="min-w-full divide-y divide-farm-border">
             <thead class="bg-farm-bg">
