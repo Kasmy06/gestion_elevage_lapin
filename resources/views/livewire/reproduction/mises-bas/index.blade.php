@@ -1,5 +1,5 @@
 <div>
-    <x-page-header title="Mises bas &amp; sevrages" subtitle="Suivi des portées jusqu'au sevrage (chapitre 4.5-4.6 de l'Agrodok)" />
+    <x-page-header title="Mises bas & sevrages"subtitle="Suivi des portées jusqu'au sevrage (chapitre 4.5-4.6 de l'Agrodok)" />
 
     <x-flash :message="$flashMessage" :type="$flashType" />
 
@@ -50,7 +50,14 @@
                             @endif
                         </td>
                         <td class="whitespace-nowrap px-4 py-3 text-sm text-farm-text-light">{{ $miseBas->date_mise_bas->format('d/m/Y') }}</td>
-                        <td class="whitespace-nowrap px-4 py-3 text-sm text-farm-text-light">{{ $miseBas->nb_nes_vivants }} / {{ $miseBas->nb_morts_nes }}</td>
+                        <td class="whitespace-nowrap px-4 py-3 text-sm text-farm-text-light">
+                            {{ $miseBas->nb_nes_vivants }} / {{ $miseBas->nb_morts_nes }}
+                            @if ($miseBas->mortalites->isNotEmpty())
+                                <span class="ms-2 text-farm-red">
+                                    · décès : {{ $miseBas->nbMortsAuStade(\App\Models\MortaliteLapereaux::STADE_NAISSANCE) }} après naissance, {{ $miseBas->nbMortsAuStade(\App\Models\MortaliteLapereaux::STADE_SEVRAGE) }} après sevrage
+                                </span>
+                            @endif
+                        </td>
                         <td class="px-4 py-3 text-sm text-farm-text-light">
                             @if ($miseBas->sevrage)
                                 Sevré le {{ $miseBas->sevrage->date_sevrage->format('d/m/Y') }} ({{ $miseBas->sevrage->nb_sevres }})
@@ -61,19 +68,26 @@
                                 <span class="font-medium text-farm-orange">Sevrage prévu le {{ $miseBas->date_sevrage_prevue->format('d/m/Y') }}</span>
                             @endif
                         </td>
-                        <td class="whitespace-nowrap px-4 py-3 text-right text-sm">
-                            <button type="button" wire:click="ouvrirModification({{ $miseBas->id }})" class="font-medium text-farm-blue hover:underline">
-                                Modifier
-                            </button>
-                            @if (! $miseBas->sevrage)
-                                <button type="button" wire:click="ouvrirSevrage({{ $miseBas->id }})" class="ms-3 font-medium text-farm-green hover:underline">
-                                    Enregistrer le sevrage
+                        <td class="px-4 py-3 text-right text-sm">
+                            <div class="flex flex-col items-end gap-1">
+                                <button type="button" wire:click="ouvrirModification({{ $miseBas->id }})" class="font-medium text-farm-blue hover:underline">
+                                    Modifier
                                 </button>
-                            @elseif (! $miseBas->sevrage->lapereaux_generes)
-                                <button type="button" wire:click="ouvrirGenerationLapereaux({{ $miseBas->id }})" class="ms-3 font-medium text-farm-green hover:underline">
-                                    Générer les lapereaux
-                                </button>
-                            @endif
+                                @if (! $miseBas->sevrage || ! $miseBas->sevrage->lapereaux_generes)
+                                    <button type="button" wire:click="ouvrirMortalite({{ $miseBas->id }})" class="font-medium text-farm-red hover:underline">
+                                        Déclarer un décès
+                                    </button>
+                                @endif
+                                @if (! $miseBas->sevrage)
+                                    <button type="button" wire:click="ouvrirSevrage({{ $miseBas->id }})" class="font-medium text-farm-green hover:underline">
+                                        Enregistrer le sevrage
+                                    </button>
+                                @elseif (! $miseBas->sevrage->lapereaux_generes)
+                                    <button type="button" wire:click="ouvrirGenerationLapereaux({{ $miseBas->id }})" class="font-medium text-farm-green hover:underline">
+                                        Générer les lapereaux
+                                    </button>
+                                @endif
+                            </div>
                         </td>
                     </tr>
                 @empty
@@ -90,6 +104,47 @@
     <div class="mt-4">
         {{ $misesBas->links() }}
     </div>
+
+    <x-crud-modal :show="$modal === 'mortalite'" title="Déclarer un décès de lapereau">
+        @if ($selectedMiseBas)
+            <form wire:submit="enregistrerMortalite" class="space-y-4">
+                <p class="text-sm text-farm-text-light">
+                    Portée de <strong class="text-farm-text">{{ $selectedMiseBas->femelle?->identifiant ?? '#'.$selectedMiseBas->femelle_id }}</strong>.
+                    Ce décès concerne un lapereau non encore identifié (sans fiche Lapin).
+                </p>
+                <div>
+                    <x-input-label for="mortaliteStade" value="Stade du décès" />
+                    <x-select-input wire:model="mortaliteStade" id="mortaliteStade" class="mt-1 block w-full">
+                        @foreach (\App\Models\MortaliteLapereaux::STADES as $value => $label)
+                            <option value="{{ $value }}">{{ $label }}</option>
+                        @endforeach
+                    </x-select-input>
+                    <x-input-error :messages="$errors->get('mortaliteStade')" class="mt-2" />
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <x-input-label for="mortaliteDate" value="Date du décès" />
+                        <x-text-input wire:model="mortaliteDate" id="mortaliteDate" type="date" class="mt-1 block w-full" />
+                        <x-input-error :messages="$errors->get('mortaliteDate')" class="mt-2" />
+                    </div>
+                    <div>
+                        <x-input-label for="mortaliteNombre" value="Nombre de lapereaux" />
+                        <x-text-input wire:model="mortaliteNombre" id="mortaliteNombre" type="number" min="1" class="mt-1 block w-full" />
+                        <x-input-error :messages="$errors->get('mortaliteNombre')" class="mt-2" />
+                    </div>
+                </div>
+                <div>
+                    <x-input-label for="mortaliteNotes" value="Cause ou observations (optionnel)" />
+                    <x-textarea-input wire:model="mortaliteNotes" id="mortaliteNotes" rows="2" class="mt-1 block w-full"></x-textarea-input>
+                    <x-input-error :messages="$errors->get('mortaliteNotes')" class="mt-2" />
+                </div>
+                <div class="flex justify-end gap-3 pt-2">
+                    <x-secondary-button type="button" wire:click="closeModal">Annuler</x-secondary-button>
+                    <x-primary-button>Enregistrer</x-primary-button>
+                </div>
+            </form>
+        @endif
+    </x-crud-modal>
 
     <x-crud-modal :show="$modal === 'edit'" title="Modifier la mise bas">
         @if ($selectedMiseBas)

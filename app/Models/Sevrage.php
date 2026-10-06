@@ -43,6 +43,14 @@ class Sevrage extends Model
     }
 
     /**
+     * Lapereaux sevrés encore vivants, non encore identifiés (sans fiche Lapin).
+     */
+    public function nbLapereauxAIdentifier(): int
+    {
+        return max(0, $this->nb_sevres - $this->miseBas->nbMortsAuStade(MortaliteLapereaux::STADE_SEVRAGE));
+    }
+
+    /**
      * Génère individuellement les lapereaux sevrés comme nouvelles fiches Lapin
      * (identification, chapitre 9 de l'Agrodok), avec généalogie et cage
      * héritées de la portée. Idempotent : ne génère qu'une seule fois.
@@ -56,7 +64,7 @@ class Sevrage extends Model
         $miseBas = $this->miseBas()->with('saillie')->first();
         $saillie = $miseBas->saillie;
 
-        $lapereaux = collect(range(1, $this->nb_sevres))->map(function (int $index) use ($miseBas, $saillie, $cageId) {
+        $lapereaux = collect(range(1, $this->nbLapereauxAIdentifier()))->map(function (int $index) use ($miseBas, $saillie, $cageId) {
             return Lapin::create([
                 'identifiant' => sprintf('P%d-%d', $miseBas->id, $index),
                 'race_id' => $saillie->femelle?->race_id,

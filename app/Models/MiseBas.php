@@ -6,6 +6,7 @@ use App\Models\Concerns\LogsActivity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class MiseBas extends Model
@@ -57,6 +58,16 @@ class MiseBas extends Model
     public function sevrage(): HasOne
     {
         return $this->hasOne(Sevrage::class);
+    }
+
+    public function mortalites(): HasMany
+    {
+        return $this->hasMany(MortaliteLapereaux::class);
+    }
+
+    public function nbMortsAuStade(string $stade): int
+    {
+        return (int) $this->mortalites()->where('stade', $stade)->sum('nombre');
     }
 
     public function enAttenteSevrage(): bool

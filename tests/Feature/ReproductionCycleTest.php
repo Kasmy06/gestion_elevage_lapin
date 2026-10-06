@@ -134,6 +134,101 @@ class ReproductionCycleTest extends TestCase
         $this->assertSame('Portée nombreuse', $miseBas->notes);
     }
 
+    public function test_un_deces_apres_naissance_reduit_le_nombre_propose_au_sevrage(): void
+    {
+        $femelle = Lapin::factory()->reproducteur('femelle')->create();
+        $saillie = Saillie::factory()->create(['femelle_id' => $femelle->id, 'diagnostic_gestation' => 'positif']);
+        $miseBas = \App\Models\MiseBas::factory()->create([
+            'saillie_id' => $saillie->id,
+            'femelle_id' => $femelle->id,
+            'nb_nes_vivants' => 6,
+        ]);
+
+        $this->actingAs(User::factory()->create());
+
+        Livewire::test(MisesBasIndex::class)
+            ->call('ouvrirMortalite', $miseBas->id)
+            ->set('mortaliteStade', 'naissance')
+            ->set('mortaliteNombre', 2)
+            ->call('enregistrerMortalite')
+            ->assertHasNoErrors();
+
+        Livewire::test(MisesBasIndex::class)
+            ->call('ouvrirSevrage', $miseBas->id)
+            ->assertSet('nb_sevres', 4);
+
+        Livewire::test(MisesBasIndex::class)
+            ->call('ouvrirMortalite', $miseBas->id)
+            ->set('mortaliteStade', 'naissance')
+            ->set('mortaliteNombre', 5)
+            ->call('enregistrerMortalite')
+            ->assertHasErrors('mortaliteNombre');
+    }
+
+    public function test_un_deces_apres_sevrage_reduit_les_fiches_lapereaux_generees(): void
+    {
+        $femelle = Lapin::factory()->reproducteur('femelle')->create();
+        $male = Lapin::factory()->reproducteur('male')->create();
+        $saillie = Saillie::factory()->create(['femelle_id' => $femelle->id, 'male_id' => $male->id, 'diagnostic_gestation' => 'positif']);
+        $miseBas = \App\Models\MiseBas::factory()->create([
+            'saillie_id' => $saillie->id,
+            'femelle_id' => $femelle->id,
+            'nb_nes_vivants' => 6,
+        ]);
+        $miseBas->sevrage()->create(['date_sevrage' => Carbon::today(), 'nb_sevres' => 5]);
+
+        $this->actingAs(User::factory()->create());
+
+        Livewire::test(MisesBasIndex::class)
+            ->call('ouvrirMortalite', $miseBas->id)
+            ->set('mortaliteStade', 'sevrage')
+            ->set('mortaliteNombre', 2)
+            ->call('enregistrerMortalite')
+            ->assertHasNoErrors();
+
+        $lapinsAvant = Lapin::count();
+
+        Livewire::test(MisesBasIndex::class)
+            ->call('ouvrirGenerationLapereaux', $miseBas->id)
+            ->call('genererLapereaux');
+
+        $this->assertSame($lapinsAvant + 3, Lapin::count());
+    }
+
+    public function test_un_deces_apres_sevrage_est_refuse_une_fois_les_fiches_creees(): void
+    {
+        $femelle = Lapin::factory()->reproducteur('femelle')->create();
+        $saillie = Saillie::factory()->create(['femelle_id' => $femelle->id, 'diagnostic_gestation' => 'positif']);
+        $miseBas = \App\Models\MiseBas::factory()->create([
+            'saillie_id' => $saillie->id,
+            'femelle_id' => $femelle->id,
+            'nb_nes_vivants' => 6,
+        ]);
+        $miseBas->sevrage()->create([
+            'date_sevrage' => Carbon::today(),
+            'nb_sevres' => 5,
+            'lapereaux_generes' => true,
+        ]);
+
+        $this->actingAs(User::factory()->create());
+
+        Livewire::test(MisesBasIndex::class)
+            ->call('ouvrirMortalite', $miseBas->id)
+            ->set('mortaliteStade', 'sevrage')
+            ->set('mortaliteNombre', 1)
+            ->call('enregistrerMortalite')
+            ->assertHasErrors('mortaliteStade');
+
+        Livewire::test(MisesBasIndex::class)
+            ->call('ouvrirMortalite', $miseBas->id)
+            ->set('mortaliteStade', 'naissance')
+            ->set('mortaliteNombre', 1)
+            ->call('enregistrerMortalite')
+            ->assertHasErrors('mortaliteStade');
+
+        $this->assertSame(0, $miseBas->mortalites()->count());
+    }
+
     public function test_le_nombre_de_nes_vivants_ne_peut_pas_devenir_inferieur_au_nombre_deja_sevre(): void
     {
         $user = User::factory()->create();
@@ -142,6 +237,7 @@ class ReproductionCycleTest extends TestCase
         $miseBas = \App\Models\MiseBas::factory()->create([
             'saillie_id' => $saillie->id,
             'femelle_id' => $femelle->id,
+            'date_mise_bas' => Carbon::today()->subDays(5),
             'nb_nes_vivants' => 6,
         ]);
         $miseBas->sevrage()->create([

@@ -5,6 +5,7 @@ namespace App\Livewire\Reproduction\MisesBas;
 use App\Livewire\Concerns\HasFlashMessage;
 use App\Models\Cage;
 use App\Models\MiseBas;
+use App\Models\MortaliteLapereaux;
 use App\Models\Saillie;
 use App\Models\Sevrage;
 use Illuminate\Support\Carbon;
@@ -28,6 +29,15 @@ class Index extends Component
     public int $nb_morts_nes = 0;
 
     public ?string $notes = null;
+
+    // Formulaire : décès de lapereaux
+    public string $mortaliteStade = MortaliteLapereaux::STADE_NAISSANCE;
+
+    public string $mortaliteDate = '';
+
+    public int $mortaliteNombre = 1;
+
+    public ?string $mortaliteNotes = null;
 
     // Formulaire : sevrage
     public string $date_sevrage = '';
@@ -81,11 +91,74 @@ class Index extends Component
         $this->closeModal();
     }
 
+    public function ouvrirMortalite(int $miseBasId): void
+    {
+        $this->selectedMiseBas = MiseBas::with('sevrage')->findOrFail($miseBasId);
+        $this->mortaliteStade = MortaliteLapereaux::STADE_NAISSANCE;
+        $this->mortaliteDate = Carbon::today()->toDateString();
+        $this->mortaliteNombre = 1;
+        $this->mortaliteNotes = null;
+        $this->modal = 'mortalite';
+    }
+
+    public function enregistrerMortalite(): void
+    {
+        $this->validate([
+            'mortaliteStade' => ['required', 'in:'.implode(',', array_keys(MortaliteLapereaux::STADES))],
+            'mortaliteDate' => ['required', 'date', 'before_or_equal:today'],
+            'mortaliteNombre' => ['required', 'integer', 'min:1'],
+            'mortaliteNotes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $miseBas = $this->selectedMiseBas;
+        $sevrage = $miseBas->sevrage;
+
+        if ($this->mortaliteStade === MortaliteLapereaux::STADE_NAISSANCE) {
+            if ($sevrage) {
+                $this->addError('mortaliteStade', 'Le sevrage est déjà enregistré : déclarez ce décès comme « après sevrage ».');
+
+                return;
+            }
+
+            $disponibles = $miseBas->nb_nes_vivants - $miseBas->nbMortsAuStade(MortaliteLapereaux::STADE_NAISSANCE);
+        } else {
+            if (! $sevrage) {
+                $this->addError('mortaliteStade', 'Enregistrez d\'abord le sevrage pour déclarer un décès après sevrage.');
+
+                return;
+            }
+
+            if ($sevrage->lapereaux_generes) {
+                $this->addError('mortaliteStade', 'Les fiches des lapereaux sont déjà créées : déclarez ce décès sur la fiche du lapin concerné.');
+
+                return;
+            }
+
+            $disponibles = $sevrage->nbLapereauxAIdentifier();
+        }
+
+        if ($this->mortaliteNombre > $disponibles) {
+            $this->addError('mortaliteNombre', 'Il ne reste que '.$disponibles.' lapereau(x) vivant(s) à ce stade.');
+
+            return;
+        }
+
+        $miseBas->mortalites()->create([
+            'date' => $this->mortaliteDate,
+            'stade' => $this->mortaliteStade,
+            'nombre' => $this->mortaliteNombre,
+            'notes' => $this->mortaliteNotes,
+        ]);
+
+        $this->flash('Décès de '.$this->mortaliteNombre.' lapereau(x) enregistré ('.MortaliteLapereaux::STADES[$this->mortaliteStade].').');
+        $this->closeModal();
+    }
+
     public function ouvrirSevrage(int $miseBasId): void
     {
         $this->selectedMiseBas = MiseBas::findOrFail($miseBasId);
         $this->date_sevrage = Carbon::today()->toDateString();
-        $this->nb_sevres = $this->selectedMiseBas->nb_nes_vivants;
+        $this->nb_sevres = $this->selectedMiseBas->nb_nes_vivants - $this->selectedMiseBas->nbMortsAuStade(MortaliteLapereaux::STADE_NAISSANCE);
         $this->poids_moyen_g = null;
         $this->cage_id = null;
         $this->modal = 'sevrage';
@@ -97,7 +170,7 @@ class Index extends Component
 
         $this->selectedMiseBas = $miseBas;
         $this->selectedSevrageId = $miseBas->sevrage->id;
-        $this->selectedSevrageNbSevres = $miseBas->sevrage->nb_sevres;
+        $this->selectedSevrageNbSevres = $miseBas->sevrage->nbLapereauxAIdentifier();
         $this->cage_id = null;
         $this->modal = 'lapereaux';
     }
@@ -114,7 +187,7 @@ class Index extends Component
     {
         $this->validate([
             'date_sevrage' => ['required', 'date', 'before_or_equal:today'],
-            'nb_sevres' => ['required', 'integer', 'min:0', 'max:'.$this->selectedMiseBas->nb_nes_vivants],
+            'nb_sevres' => ['required', 'integer', 'min:0', 'max:'.($this->selectedMiseBas->nb_nes_vivants - $this->selectedMiseBas->nbMortsAuStade(MortaliteLapereaux::STADE_NAISSANCE))],
             'poids_moyen_g' => ['nullable', 'integer', 'min:0'],
         ]);
 
@@ -140,7 +213,7 @@ class Index extends Component
     public function render()
     {
         $misesBas = MiseBas::query()
-            ->with(['femelle', 'sevrage'])
+            ->with(['femelle', 'sevrage', 'mortalites'])
             ->orderByDesc('date_mise_bas')
             ->paginate(15);
 
