@@ -5,11 +5,13 @@ namespace Tests\Feature;
 use App\Models\Aliment;
 use App\Models\Cage;
 use App\Models\Lapin;
+use App\Models\Parametre;
 use App\Models\Race;
 use App\Models\SanteIntervention;
 use App\Models\Sortie;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class SmokeTest extends TestCase
@@ -53,6 +55,20 @@ class SmokeTest extends TestCase
 
         $this->get(route('lapins.show', $lapin))->assertOk();
         $this->get(route('lapins.edit', $lapin))->assertOk();
+    }
+
+    public function test_le_titre_et_le_logo_de_la_ferme_sont_affiches_dans_longlet(): void
+    {
+        $user = User::factory()->create(['role' => 'eleveur']);
+        Parametre::query()->updateOrCreate(['id' => 1], [
+            'nom_ferme' => 'Ferme Test',
+            'devise' => 'FCFA',
+            'logo_path' => 'logos/test.jpg',
+        ]);
+
+        $this->actingAs($user)->get(route('dashboard'))
+            ->assertSee('<title>Ferme Test</title>', false)
+            ->assertSee('<link rel="icon" href="'.Storage::url('logos/test.jpg').'">', false);
     }
 
     public function test_la_page_parametres_est_reservee_aux_administrateurs(): void
