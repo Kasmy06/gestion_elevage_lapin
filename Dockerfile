@@ -55,5 +55,11 @@ ENV PORT=8080 \
     SERVER_NAME=:8080
 EXPOSE 8080
 
+# L'image FrankenPHP teste l'API d'admin de Caddy (:2019), qui n'existe pas avec
+# `php-server` : le conteneur serait toujours « unhealthy » et Traefik ne
+# routerait plus vers lui. On teste donc l'app elle-même (route /up de Laravel).
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+    CMD curl -fsS "http://127.0.0.1:${PORT:-8080}/up" >/dev/null || exit 1
+
 USER www-data
 CMD ["docker/start.sh"]
