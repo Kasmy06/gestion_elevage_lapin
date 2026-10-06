@@ -2,24 +2,21 @@
     <x-page-header title="Comptabilité" subtitle="Recettes, dépenses et profit de l'élevage">
         <x-slot name="actions">
             <div class="flex items-center gap-2">
-                <x-select-input wire:model.live="mois" class="text-sm">
+                <x-select-input wire:model.live="mois" class="text-sm" :disabled="$toutesPeriodes">
                     @foreach (['1'=>'Janvier','2'=>'Février','3'=>'Mars','4'=>'Avril','5'=>'Mai','6'=>'Juin','7'=>'Juillet','8'=>'Août','9'=>'Septembre','10'=>'Octobre','11'=>'Novembre','12'=>'Décembre'] as $value => $label)
                         <option value="{{ $value }}">{{ $label }}</option>
                     @endforeach
                 </x-select-input>
-                <x-select-input wire:model.live="annee" class="text-sm">
+                <x-select-input wire:model.live="annee" class="text-sm" :disabled="$toutesPeriodes">
                     @foreach (range(now()->year, now()->year - 3) as $y)
                         <option value="{{ $y }}">{{ $y }}</option>
                     @endforeach
                 </x-select-input>
+                <label class="flex items-center gap-1.5 text-sm text-farm-text-light">
+                    <input type="checkbox" wire:model.live="toutesPeriodes" class="rounded border-farm-border text-farm-green focus:ring-farm-green">
+                    Toutes les périodes
+                </label>
             </div>
-            @if (auth()->user()->isAdmin())
-                <a href="{{ route('comptabilite.depenses.corbeille') }}" wire:navigate>
-                    <x-secondary-button>
-                        <span class="material-icons text-base">delete_outline</span> Corbeille
-                    </x-secondary-button>
-                </a>
-            @endif
             <x-primary-button wire:click="ouvrirDepense">
                 <span class="material-icons text-base">add</span> Dépense
             </x-primary-button>
@@ -64,7 +61,7 @@
 
     <x-table-card>
         <div class="flex items-center justify-between border-b border-farm-border px-4 py-3">
-            <h3 class="text-sm font-semibold text-farm-text">Dépenses du mois</h3>
+            <h3 class="text-sm font-semibold text-farm-text">{{ $toutesPeriodes ? 'Toutes les dépenses' : 'Dépenses du mois' }}</h3>
             <button wire:click="exporterDepenses" class="inline-flex items-center gap-1.5 text-sm font-medium text-farm-green hover:underline">
                 <span class="material-icons text-base">download</span> Export CSV
             </button>
@@ -77,7 +74,6 @@
                     <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-farm-text-light">Catégorie</th>
                     <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-farm-text-light">Notes</th>
                     <th class="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-farm-text-light">Montant</th>
-                    <th class="px-4 py-2.5"></th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-farm-border">
@@ -88,21 +84,10 @@
                         <td class="whitespace-nowrap px-4 py-3 text-sm text-farm-text-light">{{ \App\Models\Depense::CATEGORIES[$depense->categorie] }}</td>
                         <td class="px-4 py-3 text-sm text-farm-text-light">{{ $depense->notes ?? '—' }}</td>
                         <td class="whitespace-nowrap px-4 py-3 text-right text-sm font-medium text-farm-red">-{{ number_format($depense->montant, 0, ',', ' ') }}</td>
-                        <td class="whitespace-nowrap px-4 py-3 text-right text-sm">
-                            @if (auth()->user()->isAdmin())
-                                <button
-                                    type="button"
-                                    wire:click="supprimerDepense({{ $depense->id }})"
-                                    wire:confirm="Supprimer la dépense « {{ $depense->libelle }} » ?"
-                                    class="material-icons text-base text-farm-text-light hover:text-farm-red"
-                                    title="Supprimer"
-                                >delete</button>
-                            @endif
-                        </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="px-4 py-8 text-center text-sm text-farm-text-light">Aucune dépense pour cette période.</td>
+                        <td colspan="5" class="px-4 py-8 text-center text-sm text-farm-text-light">Aucune dépense pour cette période.</td>
                     </tr>
                 @endforelse
             </tbody>

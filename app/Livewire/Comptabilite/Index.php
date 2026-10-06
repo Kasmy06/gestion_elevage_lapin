@@ -22,6 +22,8 @@ class Index extends Component
 
     public int $annee;
 
+    public bool $toutesPeriodes = false;
+
     public bool $showModal = false;
 
     public string $categorie = 'autre';
@@ -42,7 +44,7 @@ class Index extends Component
 
     public function updating($property): void
     {
-        if (in_array($property, ['mois', 'annee'], true)) {
+        if (in_array($property, ['mois', 'annee', 'toutesPeriodes'], true)) {
             $this->resetPage();
         }
     }
@@ -83,15 +85,6 @@ class Index extends Component
         $this->closeModal();
     }
 
-    public function supprimerDepense(Depense $depense): void
-    {
-        abort_unless(auth()->user()->isAdmin(), 403);
-
-        $depense->delete();
-
-        $this->flash('Dépense supprimée.');
-    }
-
     private function periodeSelectionnee(): array
     {
         $debut = Carbon::create($this->annee, $this->mois, 1)->startOfMonth();
@@ -101,11 +94,17 @@ class Index extends Component
 
     public function exporterDepenses(): StreamedResponse
     {
-        [$debutPeriode, $finPeriode] = $this->periodeSelectionnee();
+        if ($this->toutesPeriodes) {
+            $depenses = Depense::orderByDesc('date')->orderByDesc('id')->get();
+            $nomFichier = 'depenses-toutes.csv';
+        } else {
+            [$debutPeriode, $finPeriode] = $this->periodeSelectionnee();
 
-        $depenses = Depense::whereBetween('date', [$debutPeriode->toDateString(), $finPeriode->toDateString()])
-            ->orderByDesc('date')
-            ->get();
+            $depenses = Depense::whereBetween('date', [$debutPeriode->toDateString(), $finPeriode->toDateString()])
+                ->orderByDesc('date')
+                ->get();
+            $nomFichier = 'depenses-'.$debutPeriode->format('Y-m').'.csv';
+        }
 
         return response()->streamDownload(function () use ($depenses) {
             $sortie = fopen('php://output', 'w');
@@ -122,7 +121,7 @@ class Index extends Component
             }
 
             fclose($sortie);
-        }, 'depenses-'.$debutPeriode->format('Y-m').'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+        }, $nomFichier, ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
     private function recettes(Carbon $debut, Carbon $fin): float
@@ -153,7 +152,9 @@ class Index extends Component
             'depenses' => $depenses,
             'profit' => $recettes - $depenses,
             'dernieresVentes' => Vente::whereBetween('date', [$debutPeriode->toDateString(), $finPeriode->toDateString()])->with('client')->orderByDesc('date')->limit(5)->get(),
-            'depensesPeriode' => Depense::whereBetween('date', [$debutPeriode->toDateString(), $finPeriode->toDateString()])->orderByDesc('date')->orderByDesc('id')->paginate(15),
+            'depensesPeriode' => $this->toutesPeriodes
+                ? Depense::orderByDesc('date')->orderByDesc('id')->paginate(15)
+                : Depense::whereBetween('date', [$debutPeriode->toDateString(), $finPeriode->toDateString()])->orderByDesc('date')->orderByDesc('id')->paginate(15),
             'chartLabels' => $moisChart->map(fn (Carbon $m) => ucfirst($m->translatedFormat('M Y')))->all(),
             'chartRecettes' => $moisChart->map(fn (Carbon $m) => $this->recettes($m->copy()->startOfMonth(), $m->copy()->endOfMonth()))->all(),
             'chartDepenses' => $moisChart->map(fn (Carbon $m) => $this->depenses($m->copy()->startOfMonth(), $m->copy()->endOfMonth()))->all(),

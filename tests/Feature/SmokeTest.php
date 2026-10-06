@@ -91,12 +91,12 @@ class SmokeTest extends TestCase
         $this->actingAs($admin)->get(route('lapins.corbeille'))->assertOk();
     }
 
-    public function test_les_corbeilles_clients_ventes_et_depenses_sont_reservees_aux_administrateurs(): void
+    public function test_les_corbeilles_clients_ventes_et_employes_sont_reservees_aux_administrateurs(): void
     {
         $eleveur = User::factory()->create(['role' => 'eleveur']);
         $admin = User::factory()->create(['role' => 'admin']);
 
-        foreach (['clients.corbeille', 'ventes.corbeille', 'comptabilite.depenses.corbeille', 'employes.corbeille'] as $routeName) {
+        foreach (['clients.corbeille', 'ventes.corbeille', 'employes.corbeille'] as $routeName) {
             $this->actingAs($eleveur)->get(route($routeName))->assertForbidden();
             $this->actingAs($admin)->get(route($routeName))->assertOk();
         }

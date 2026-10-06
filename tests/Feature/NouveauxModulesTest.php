@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Livewire\Clients\Corbeille as ClientsCorbeille;
 use App\Livewire\Clients\Index as ClientsIndex;
-use App\Livewire\Comptabilite\Corbeille as DepensesCorbeille;
 use App\Livewire\Comptabilite\Index as ComptabiliteIndex;
 use App\Livewire\Employes\Corbeille as EmployesCorbeille;
 use App\Livewire\Employes\Index as EmployesIndex;
@@ -121,6 +120,25 @@ class NouveauxModulesTest extends TestCase
         Livewire::test(ComptabiliteIndex::class)
             ->call('exporterDepenses')
             ->assertFileDownloaded('depenses-'.Carbon::today()->format('Y-m').'.csv');
+    }
+
+    public function test_le_filtre_toutes_les_periodes_affiche_et_exporte_lhistorique_complet_des_depenses(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        Depense::factory()->create(['date' => Carbon::today(), 'libelle' => 'Dépense du mois']);
+        Depense::factory()->create(['date' => Carbon::today()->subMonths(6), 'libelle' => 'Dépense ancienne']);
+
+        $component = Livewire::test(ComptabiliteIndex::class)
+            ->assertSee('Dépense du mois')
+            ->assertDontSee('Dépense ancienne')
+            ->set('toutesPeriodes', true)
+            ->assertSee('Dépense du mois')
+            ->assertSee('Dépense ancienne');
+
+        $this->assertSame(2, $component->viewData('depensesPeriode')->total());
+
+        $component->call('exporterDepenses')->assertFileDownloaded('depenses-toutes.csv');
     }
 
     public function test_une_depense_peut_etre_ajoutee_depuis_la_comptabilite(): void
@@ -276,36 +294,6 @@ class NouveauxModulesTest extends TestCase
             ->call('restaurer', $vente->id);
 
         $this->assertDatabaseHas('ventes', ['id' => $vente->id, 'deleted_at' => null]);
-    }
-
-    public function test_seul_un_administrateur_peut_supprimer_une_depense(): void
-    {
-        $eleveur = User::factory()->create(['role' => 'eleveur']);
-        $depense = Depense::factory()->create();
-
-        $this->actingAs($eleveur);
-
-        Livewire::test(ComptabiliteIndex::class)
-            ->call('supprimerDepense', $depense->id)
-            ->assertStatus(403);
-    }
-
-    public function test_une_depense_supprimee_apparait_dans_la_corbeille_et_peut_etre_restauree(): void
-    {
-        $admin = User::factory()->create(['role' => 'admin']);
-        $depense = Depense::factory()->create(['libelle' => 'Dépense test']);
-
-        $this->actingAs($admin);
-
-        Livewire::test(ComptabiliteIndex::class)->call('supprimerDepense', $depense->id);
-
-        $this->assertSoftDeleted('depenses', ['id' => $depense->id]);
-
-        Livewire::test(DepensesCorbeille::class)
-            ->assertSee('Dépense test')
-            ->call('restaurer', $depense->id);
-
-        $this->assertDatabaseHas('depenses', ['id' => $depense->id, 'deleted_at' => null]);
     }
 
     public function test_un_employe_supprime_apparait_dans_la_corbeille_et_peut_etre_restaure(): void

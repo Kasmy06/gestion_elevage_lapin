@@ -100,4 +100,63 @@ class ReproductionCycleTest extends TestCase
 
         $this->assertSame($lapinsAvant + 5, Lapin::count());
     }
+
+    public function test_une_mise_bas_peut_etre_modifiee(): void
+    {
+        $user = User::factory()->create();
+        $femelle = Lapin::factory()->reproducteur('femelle')->create(['identifiant' => 'F-2']);
+        $saillie = Saillie::factory()->create(['femelle_id' => $femelle->id, 'diagnostic_gestation' => 'positif']);
+        $miseBas = \App\Models\MiseBas::factory()->create([
+            'saillie_id' => $saillie->id,
+            'femelle_id' => $femelle->id,
+            'date_mise_bas' => Carbon::today()->subDays(5),
+            'nb_nes_vivants' => 6,
+            'nb_morts_nes' => 1,
+        ]);
+
+        $this->actingAs($user);
+
+        $nouvelleDate = Carbon::today()->subDays(4)->toDateString();
+
+        Livewire::test(MisesBasIndex::class)
+            ->call('ouvrirModification', $miseBas->id)
+            ->set('date_mise_bas', $nouvelleDate)
+            ->set('nb_nes_vivants', 7)
+            ->set('nb_morts_nes', 0)
+            ->set('notes', 'Portée nombreuse')
+            ->call('modifierMiseBas')
+            ->assertHasNoErrors();
+
+        $miseBas->refresh();
+        $this->assertSame($nouvelleDate, $miseBas->date_mise_bas->toDateString());
+        $this->assertSame(7, $miseBas->nb_nes_vivants);
+        $this->assertSame(0, $miseBas->nb_morts_nes);
+        $this->assertSame('Portée nombreuse', $miseBas->notes);
+    }
+
+    public function test_le_nombre_de_nes_vivants_ne_peut_pas_devenir_inferieur_au_nombre_deja_sevre(): void
+    {
+        $user = User::factory()->create();
+        $femelle = Lapin::factory()->reproducteur('femelle')->create();
+        $saillie = Saillie::factory()->create(['femelle_id' => $femelle->id, 'diagnostic_gestation' => 'positif']);
+        $miseBas = \App\Models\MiseBas::factory()->create([
+            'saillie_id' => $saillie->id,
+            'femelle_id' => $femelle->id,
+            'nb_nes_vivants' => 6,
+        ]);
+        $miseBas->sevrage()->create([
+            'date_sevrage' => Carbon::today(),
+            'nb_sevres' => 5,
+        ]);
+
+        $this->actingAs($user);
+
+        Livewire::test(MisesBasIndex::class)
+            ->call('ouvrirModification', $miseBas->id)
+            ->set('nb_nes_vivants', 3)
+            ->call('modifierMiseBas')
+            ->assertHasErrors('nb_nes_vivants');
+
+        $this->assertSame(6, $miseBas->fresh()->nb_nes_vivants);
+    }
 }

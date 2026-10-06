@@ -8,7 +8,6 @@ use App\Livewire\Cages\Corbeille as CageCorbeille;
 use App\Livewire\Cages\Index as CagesIndex;
 use App\Livewire\Clients\Corbeille as ClientCorbeille;
 use App\Livewire\Clients\Index as ClientsIndex;
-use App\Livewire\Comptabilite\Corbeille as DepenseCorbeille;
 use App\Livewire\Comptabilite\Index as ComptabiliteIndex;
 use App\Livewire\Dashboard;
 use App\Livewire\Employes\Corbeille as EmployeCorbeille;
@@ -73,7 +72,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('employes/corbeille', EmployeCorbeille::class)->name('employes.corbeille');
         Route::get('clients/corbeille', ClientCorbeille::class)->name('clients.corbeille');
         Route::get('ventes/corbeille', VenteCorbeille::class)->name('ventes.corbeille');
-        Route::get('comptabilite/depenses/corbeille', DepenseCorbeille::class)->name('comptabilite.depenses.corbeille');
         Route::get('clapiers/corbeille', CageCorbeille::class)->name('cages.corbeille');
         Route::get('races/corbeille', RaceCorbeille::class)->name('races.corbeille');
         Route::get('activites', ActivitesIndex::class)->name('activites.index');

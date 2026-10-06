@@ -20,6 +20,15 @@ class Index extends Component
 
     public ?MiseBas $selectedMiseBas = null;
 
+    // Formulaire : modification de la mise bas
+    public string $date_mise_bas = '';
+
+    public int $nb_nes_vivants = 0;
+
+    public int $nb_morts_nes = 0;
+
+    public ?string $notes = null;
+
     // Formulaire : sevrage
     public string $date_sevrage = '';
 
@@ -35,6 +44,42 @@ class Index extends Component
     public ?int $selectedSevrageId = null;
 
     public int $selectedSevrageNbSevres = 0;
+
+    public function ouvrirModification(int $miseBasId): void
+    {
+        $this->selectedMiseBas = MiseBas::with('sevrage')->findOrFail($miseBasId);
+        $this->date_mise_bas = $this->selectedMiseBas->date_mise_bas->toDateString();
+        $this->nb_nes_vivants = $this->selectedMiseBas->nb_nes_vivants;
+        $this->nb_morts_nes = $this->selectedMiseBas->nb_morts_nes;
+        $this->notes = $this->selectedMiseBas->notes;
+        $this->modal = 'edit';
+    }
+
+    public function modifierMiseBas(): void
+    {
+        $this->validate([
+            'date_mise_bas' => ['required', 'date', 'before_or_equal:today'],
+            'nb_nes_vivants' => ['required', 'integer', 'min:0'],
+            'nb_morts_nes' => ['required', 'integer', 'min:0'],
+            'notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        if ($this->selectedMiseBas->sevrage && $this->nb_nes_vivants < $this->selectedMiseBas->sevrage->nb_sevres) {
+            $this->addError('nb_nes_vivants', 'Le nombre de nés vivants ne peut pas être inférieur au nombre déjà sevré ('.$this->selectedMiseBas->sevrage->nb_sevres.').');
+
+            return;
+        }
+
+        $this->selectedMiseBas->update([
+            'date_mise_bas' => $this->date_mise_bas,
+            'nb_nes_vivants' => $this->nb_nes_vivants,
+            'nb_morts_nes' => $this->nb_morts_nes,
+            'notes' => $this->notes,
+        ]);
+
+        $this->flash('Mise bas mise à jour.');
+        $this->closeModal();
+    }
 
     public function ouvrirSevrage(int $miseBasId): void
     {

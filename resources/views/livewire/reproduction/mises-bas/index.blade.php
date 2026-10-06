@@ -62,12 +62,15 @@
                             @endif
                         </td>
                         <td class="whitespace-nowrap px-4 py-3 text-right text-sm">
+                            <button type="button" wire:click="ouvrirModification({{ $miseBas->id }})" class="font-medium text-farm-blue hover:underline">
+                                Modifier
+                            </button>
                             @if (! $miseBas->sevrage)
-                                <button type="button" wire:click="ouvrirSevrage({{ $miseBas->id }})" class="font-medium text-farm-green hover:underline">
+                                <button type="button" wire:click="ouvrirSevrage({{ $miseBas->id }})" class="ms-3 font-medium text-farm-green hover:underline">
                                     Enregistrer le sevrage
                                 </button>
                             @elseif (! $miseBas->sevrage->lapereaux_generes)
-                                <button type="button" wire:click="ouvrirGenerationLapereaux({{ $miseBas->id }})" class="font-medium text-farm-green hover:underline">
+                                <button type="button" wire:click="ouvrirGenerationLapereaux({{ $miseBas->id }})" class="ms-3 font-medium text-farm-green hover:underline">
                                     Générer les lapereaux
                                 </button>
                             @endif
@@ -87,6 +90,42 @@
     <div class="mt-4">
         {{ $misesBas->links() }}
     </div>
+
+    <x-crud-modal :show="$modal === 'edit'" title="Modifier la mise bas">
+        @if ($selectedMiseBas)
+            <form wire:submit="modifierMiseBas" class="space-y-4">
+                <p class="text-sm text-farm-text-light">
+                    Portée de <strong class="text-farm-text">{{ $selectedMiseBas->femelle?->identifiant ?? '#'.$selectedMiseBas->femelle_id }}</strong>
+                </p>
+                <div>
+                    <x-input-label for="date_mise_bas" value="Date de mise bas" />
+                    <x-text-input wire:model="date_mise_bas" id="date_mise_bas" type="date" class="mt-1 block w-full" />
+                    <x-input-error :messages="$errors->get('date_mise_bas')" class="mt-2" />
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <x-input-label for="nb_nes_vivants" value="Nés vivants" />
+                        <x-text-input wire:model="nb_nes_vivants" id="nb_nes_vivants" type="number" min="0" class="mt-1 block w-full" />
+                        <x-input-error :messages="$errors->get('nb_nes_vivants')" class="mt-2" />
+                    </div>
+                    <div>
+                        <x-input-label for="nb_morts_nes" value="Morts-nés" />
+                        <x-text-input wire:model="nb_morts_nes" id="nb_morts_nes" type="number" min="0" class="mt-1 block w-full" />
+                        <x-input-error :messages="$errors->get('nb_morts_nes')" class="mt-2" />
+                    </div>
+                </div>
+                <div>
+                    <x-input-label for="notes" value="Notes" />
+                    <x-textarea-input wire:model="notes" id="notes" rows="3" class="mt-1 block w-full"></x-textarea-input>
+                    <x-input-error :messages="$errors->get('notes')" class="mt-2" />
+                </div>
+                <div class="flex justify-end gap-3 pt-2">
+                    <x-secondary-button type="button" wire:click="closeModal">Annuler</x-secondary-button>
+                    <x-primary-button>Enregistrer</x-primary-button>
+                </div>
+            </form>
+        @endif
+    </x-crud-modal>
 
     <x-crud-modal :show="$modal === 'sevrage'" title="Enregistrer le sevrage">
         @if ($selectedMiseBas)

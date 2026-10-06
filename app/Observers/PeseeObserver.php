@@ -33,7 +33,7 @@ class PeseeObserver
             return;
         }
 
-        $derniere = $lapin->pesees()->orderByDesc('date_pesee')->orderByDesc('id')->first();
+        $derniere = $lapin->pesees()->reorder()->orderByDesc('date_pesee')->orderByDesc('id')->first();
 
         $lapin->update(['poids_actuel_g' => $derniere?->poids_g]);
     }
